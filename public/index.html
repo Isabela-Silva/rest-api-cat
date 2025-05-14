@@ -64,6 +64,7 @@
       border-radius: 8px;
       cursor: pointer;
       font-size: 1em;
+      margin-right: 5px;
     }
 
     button:hover {
@@ -76,6 +77,7 @@
       background-color: #fce4ec;
       border-radius: 10px;
       overflow: hidden;
+      margin-bottom: 20px;
     }
 
     th, td {
@@ -96,6 +98,92 @@
 
     #btnAtualizar:hover {
       background-color: #ba68c8;
+    }
+
+    .acoes {
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-deletar {
+      background-color: #ff6b81;
+    }
+
+    .btn-deletar:hover {
+      background-color: #ff4757;
+    }
+
+    .btn-editar {
+      background-color: #70a1ff;
+    }
+
+    .btn-editar:hover {
+      background-color: #1e90ff;
+    }
+
+    .btn-comentar {
+      background-color: #7bed9f;
+    }
+
+    .btn-comentar:hover {
+      background-color: #2ed573;
+    }
+
+    .comentarios {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f8e1f4;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .comentario {
+      padding: 8px;
+      margin-bottom: 5px;
+      background-color: #fff;
+      border-radius: 5px;
+      border-left: 3px solid #ce93d8;
+    }
+
+    .comentario-data {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .fechar {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .fechar:hover {
+      color: black;
     }
   </style>
 </head>
@@ -128,12 +216,38 @@
         <th>Nome</th>
         <th>Idade</th>
         <th>Cor</th>
+        <th>Ações</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Gatos serão inseridos aqui -->
     </tbody>
   </table>
+
+  <div id="modalEditarNome" class="modal">
+    <div class="modal-content">
+      <span class="fechar">&times;</span>
+      <h2>✏️ Editar Nome do Gatinho</h2>
+      <form id="formEditarNome">
+        <input type="hidden" id="editarGatoId">
+        <label for="novoNome">🐱 Novo Nome:</label>
+        <input type="text" id="novoNome" required>
+        <button type="submit">💾 Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modalComentario" class="modal">
+    <div class="modal-content">
+      <span class="fechar">&times;</span>
+      <h2>💬 Adicionar Comentário</h2>
+      <form id="formComentario">
+        <input type="hidden" id="comentarioGatoId">
+        <label for="textoComentario">💭 Comentário:</label>
+        <input type="text" id="textoComentario" required>
+        <button type="submit">📝 Adicionar</button>
+      </form>
+    </div>
+  </div>
 
   <script>
     const API_URL = 'http://localhost:3000/api/gatos';
@@ -148,17 +262,84 @@
 
         gatos.forEach(gato => {
           const tr = document.createElement('tr');
+          tr.setAttribute('data-id', gato.id);
+          
           tr.innerHTML = `
             <td>${gato.id}</td>
             <td>${gato.nome}</td>
             <td>${gato.idade}</td>
             <td>${gato.cor}</td>
+            <td class="acoes">
+              <button class="btn-editar" data-id="${gato.id}">✏️</button>
+              <button class="btn-comentar" data-id="${gato.id}">💬</button>
+              <button class="btn-deletar" data-id="${gato.id}">🗑️</button>
+              <button class="btn-mostrar-comentarios" data-id="${gato.id}">👁️</button>
+            </td>
           `;
+          
           tabela.appendChild(tr);
+          
+          const divComentarios = document.createElement('tr');
+          divComentarios.innerHTML = `
+            <td colspan="5">
+              <div class="comentarios" id="comentarios-${gato.id}">
+                <h3>💭 Comentários</h3>
+                <div class="lista-comentarios">
+                  ${renderizarComentarios(gato.comentarios)}
+                </div>
+              </div>
+            </td>
+          `;
+          tabela.appendChild(divComentarios);
+        });
+        
+        document.querySelectorAll('.btn-deletar').forEach(btn => {
+          btn.addEventListener('click', deletarGato);
+        });
+        
+        document.querySelectorAll('.btn-editar').forEach(btn => {
+          btn.addEventListener('click', abrirModalEditarNome);
+        });
+        
+        document.querySelectorAll('.btn-comentar').forEach(btn => {
+          btn.addEventListener('click', abrirModalComentario);
+        });
+        
+        document.querySelectorAll('.btn-mostrar-comentarios').forEach(btn => {
+          btn.addEventListener('click', toggleComentarios);
         });
       } catch (error) {
         console.error('Erro ao carregar gatos:', error);
         alert('⚠️ Erro ao carregar a lista de gatos. Verifique se o servidor está rodando.');
+      }
+    }
+    
+    function renderizarComentarios(comentarios) {
+      if (comentarios.length === 0) {
+        return '<p>Nenhum comentário ainda.</p>';
+      }
+      
+      return comentarios.map(comentario => `
+        <div class="comentario">
+          <div>${comentario.texto}</div>
+          <div class="comentario-data">${formatarData(comentario.data)}</div>
+        </div>
+      `).join('');
+    }
+    
+    function formatarData(dataString) {
+      const data = new Date(dataString);
+      return data.toLocaleString('pt-BR');
+    }
+    
+    function toggleComentarios(event) {
+      const gatoId = event.target.getAttribute('data-id');
+      const comentariosDiv = document.getElementById(`comentarios-${gatoId}`);
+      
+      if (comentariosDiv.style.display === 'block') {
+        comentariosDiv.style.display = 'none';
+      } else {
+        comentariosDiv.style.display = 'block';
       }
     }
 
@@ -190,9 +371,116 @@
         alert('⚠️ Erro ao adicionar gato. Verifique se o servidor está rodando.');
       }
     }
+    
+    async function deletarGato(event) {
+      const id = event.target.getAttribute('data-id');
+      const confirmacao = confirm('🙀 Tem certeza que deseja remover este gatinho?');
+      
+      if (confirmacao) {
+        try {
+          const response = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            alert('😿 Gatinho removido com sucesso!');
+            carregarGatos();
+          } else {
+            alert('❌ Erro ao remover gatinho.');
+          }
+        } catch (error) {
+          console.error('Erro ao deletar gato:', error);
+          alert('⚠️ Erro ao remover gatinho. Verifique se o servidor está rodando.');
+        }
+      }
+    }
+    
+    function abrirModalEditarNome(event) {
+      const id = event.target.getAttribute('data-id');
+      document.getElementById('editarGatoId').value = id;
+      document.getElementById('modalEditarNome').style.display = 'block';
+    }
+    
+    function abrirModalComentario(event) {
+      const id = event.target.getAttribute('data-id');
+      document.getElementById('comentarioGatoId').value = id;
+      document.getElementById('modalComentario').style.display = 'block';
+    }
+    
+    async function atualizarNomeGato(event) {
+      event.preventDefault();
+      
+      const id = document.getElementById('editarGatoId').value;
+      const novoNome = document.getElementById('novoNome').value;
+      
+      try {
+        const response = await fetch(`${API_URL}/${id}/nome`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ novoNome })
+        });
+        
+        if (response.ok) {
+          alert('✨ Nome do gatinho atualizado com sucesso!');
+          document.getElementById('modalEditarNome').style.display = 'none';
+          carregarGatos();
+        } else {
+          alert('❌ Erro ao atualizar nome do gatinho.');
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar nome:', error);
+        alert('⚠️ Erro ao atualizar nome do gatinho. Verifique se o servidor está rodando.');
+      }
+    }
+    
+    async function adicionarComentario(event) {
+      event.preventDefault();
+      
+      const id = document.getElementById('comentarioGatoId').value;
+      const texto = document.getElementById('textoComentario').value;
+      
+      try {
+        const response = await fetch(`${API_URL}/${id}/comentarios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto })
+        });
+        
+        if (response.ok) {
+          alert('💬 Comentário adicionado com sucesso!');
+          document.getElementById('modalComentario').style.display = 'none';
+          document.getElementById('textoComentario').value = '';
+          carregarGatos();
+        } else {
+          alert('❌ Erro ao adicionar comentário.');
+        }
+      } catch (error) {
+        console.error('Erro ao adicionar comentário:', error);
+        alert('⚠️ Erro ao adicionar comentário. Verifique se o servidor está rodando.');
+      }
+    }
 
     document.getElementById('formGato').addEventListener('submit', adicionarGato);
     document.getElementById('btnAtualizar').addEventListener('click', carregarGatos);
+    document.getElementById('formEditarNome').addEventListener('submit', atualizarNomeGato);
+    document.getElementById('formComentario').addEventListener('submit', adicionarComentario);
+    
+    document.querySelectorAll('.fechar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('modalEditarNome').style.display = 'none';
+        document.getElementById('modalComentario').style.display = 'none';
+      });
+    });
+    
+    window.addEventListener('click', (event) => {
+      if (event.target === document.getElementById('modalEditarNome')) {
+        document.getElementById('modalEditarNome').style.display = 'none';
+      }
+      if (event.target === document.getElementById('modalComentario')) {
+        document.getElementById('modalComentario').style.display = 'none';
+      }
+    });
+    
     window.addEventListener('load', carregarGatos);
   </script>
 </body>
