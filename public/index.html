@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🐱💖 Cadastro de Gatinhos 💖🐱</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(to bottom, #ffe6f0, #f3e5f5);
+      color: #5e4b8b;
+    }
+
+    h1 {
+      text-align: center;
+      color: #d63384;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      color: #ba68c8;
+    }
+
+    img {
+      display: block;
+      margin: 0 auto 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      max-width: 30%;
+    }
+
+    form {
+      background-color: #fff0f6;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 2px dashed #f8bbd0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #f8bbd0;
+      border-radius: 8px;
+      background-color: #fff;
+    }
+
+    button {
+      background-color: #f48fb1;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+
+    button:hover {
+      background-color: #ec407a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fce4ec;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #f8bbd0;
+    }
+
+    th {
+      background-color: #f8bbd0;
+      color: #6a1b9a;
+    }
+
+    #btnAtualizar {
+      margin-bottom: 15px;
+      background-color: #ce93d8;
+    }
+
+    #btnAtualizar:hover {
+      background-color: #ba68c8;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐾 Cadastro de Gatinhos Fofinhos 🐾</h1>
+  <img src="images/gato.jpg" alt="Gatinho fofo" />
+
+  <form id="formGato">
+    <h2>✨ Adicionar Novo Gato ✨</h2>
+
+    <label for="nome">🐱 Nome:</label>
+    <input type="text" id="nome" required />
+
+    <label for="idade">🎂 Idade:</label>
+    <input type="number" id="idade" required />
+
+    <label for="cor">🎨 Cor:</label>
+    <input type="text" id="cor" required />
+
+    <button type="submit">💖 Adicionar Gato 💖</button>
+  </form>
+
+  <h2>📋 Lista de Gatinhos</h2>
+  <button id="btnAtualizar">🔄 Atualizar Lista</button>
+
+  <table id="tabelaGatos">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Idade</th>
+        <th>Cor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Gatos serão inseridos aqui -->
+    </tbody>
+  </table>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api/gatos';
+
+    async function carregarGatos() {
+      try {
+        const response = await fetch(API_URL);
+        const gatos = await response.json();
+
+        const tabela = document.querySelector('#tabelaGatos tbody');
+        tabela.innerHTML = '';
+
+        gatos.forEach(gato => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${gato.id}</td>
+            <td>${gato.nome}</td>
+            <td>${gato.idade}</td>
+            <td>${gato.cor}</td>
+          `;
+          tabela.appendChild(tr);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar gatos:', error);
+        alert('⚠️ Erro ao carregar a lista de gatos. Verifique se o servidor está rodando.');
+      }
+    }
+
+    async function adicionarGato(evento) {
+      evento.preventDefault();
+
+      const nome = document.getElementById('nome').value;
+      const idade = parseInt(document.getElementById('idade').value);
+      const cor = document.getElementById('cor').value;
+
+      const novoGato = { nome, idade, cor };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(novoGato)
+        });
+
+        if (response.ok) {
+          alert('🐾 Gato adicionado com sucesso!');
+          document.getElementById('formGato').reset();
+          carregarGatos();
+        } else {
+          alert('❌ Erro ao adicionar gato.');
+        }
+      } catch (error) {
+        console.error('Erro ao adicionar gato:', error);
+        alert('⚠️ Erro ao adicionar gato. Verifique se o servidor está rodando.');
+      }
+    }
+
+    document.getElementById('formGato').addEventListener('submit', adicionarGato);
+    document.getElementById('btnAtualizar').addEventListener('click', carregarGatos);
+    window.addEventListener('load', carregarGatos);
+  </script>
+</body>
+</html>
